@@ -15,11 +15,9 @@
 """
 
 import numpy as np
-from numpy import inf as inf
 from math import floor
 import pyfftw
-from time import time
-import pandas as pd    
+from time import time   
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import sys
