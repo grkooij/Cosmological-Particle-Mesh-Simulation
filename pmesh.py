@@ -15,15 +15,17 @@
 """
 
 import numpy as np
+from numpy import inf as inf
 from math import floor
 import pyfftw
-from time import time   
+from time import time  
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import sys
 import os
 import math
 import h5py
+import random
 
 class simbox:
 	def __init__(self, Npart, Ngrid, Lx, n_cpu, seed, force_resolution, stepspersavestep, savesteps):
@@ -119,6 +121,13 @@ def Gaussian_Random_Field():
 	factor2 = np.divide(np.log(1 + 2.34*q)**2, (2.34*q)**2, where=q!=0)
 	LCDM = factor2 / factor1
 
+
+
+	q1d = lxaxis / Gamma
+	factor11d = np.sqrt(1 + 3.89*q1d + (16.1*q1d)**2 + (5.46*q1d)**3 + (6.71*q1d)**4)
+	factor21d = np.divide(np.log(1 + 2.34*q1d)**2, (2.34*q1d)**2, where=q1d!=0)
+	LCDM1d = factor21d / factor11d
+
 	#Calculating the power spectrum
 	if n >= 0.:
 
@@ -130,6 +139,13 @@ def Gaussian_Random_Field():
 
 		#Power spectrum
 		P = A * (kgrid)**n*LCDM
+
+
+		P1d = A*lxaxis**n*LCDM1d
+		#plt.plot(lxaxis, P1d)
+		#plt.yscale('log')
+		#plt.xscale('log')
+		#plt.show()
 	
 	else:
 		#Sum of power spectrum
@@ -143,6 +159,9 @@ def Gaussian_Random_Field():
 		#Power spectrum
 		P = A * div_kgrid * LCDM
 
+
+
+
 	#Multiplying by the sqrt of the power spectrum and linear growth factor
 	f1 = np.sqrt(P*Dt**2) * f1
 	f2 = np.sqrt(P*Dt**2) * f2
@@ -152,7 +171,7 @@ def Gaussian_Random_Field():
 	
 	#Real space density field
 	density_real = np.fft.ifftn(density_k).real
-	#print('GRF density contrasts:', density_real)
+	print('GRF density contrasts:', density_real)
 	return density_real
 
 def Zeldovich(density_real):
@@ -197,6 +216,9 @@ def Zeldovich(density_real):
 	ZAx = grad_x_operator*potential*periodic_space
 	ZAy = grad_y_operator*potential*periodic_space
 	ZAz = grad_z_operator*potential*periodic_space
+	#ZAx = grad_x_operator*potential
+	#ZAy = grad_y_operator*potential
+	#ZAz = grad_z_operator*potential
 	
 	#As part of the PyFFTW module, we must create an auxiliary FFT grid 
 	#Then, we call the FFTW module which creates an object with so called wisdom of how to 
@@ -223,7 +245,7 @@ def Zeldovich(density_real):
 	DFy = np.reshape(ZAy, (Npart**3)).real
 	DFz = np.reshape(ZAz, (Npart**3)).real
 
-	#print('Displacement field:', DFx)
+	print('Displacement field:', DFx)
 
 	#Define unperturbed lattice positions
 	#Has to be evenly distributed over a periodic box to prevent unwanted perturbations
@@ -237,16 +259,25 @@ def Zeldovich(density_real):
 
 	#And we perturb using Zel'dovich approximation, and correct for the scale of the force grid
 	#And additionally we add a %Ngrid to enforce periodic boundaries
-	x_dat = (np.reshape(x_unpert, Npart*Npart*Npart) + Dt*DFx) % Ngrid
-	y_dat = (np.reshape(y_unpert, Npart*Npart*Npart) + Dt*DFy) % Ngrid
-	z_dat = (np.reshape(z_unpert, Npart*Npart*Npart) + Dt*DFz) % Ngrid
+	x_dat = (np.reshape(x_unpert, Npart*Npart*Npart) + Dt*DFx) 
+	y_dat = (np.reshape(y_unpert, Npart*Npart*Npart) + Dt*DFy) 
+	z_dat = (np.reshape(z_unpert, Npart*Npart*Npart) + Dt*DFz) 
+
+	for i in range(len(x_dat)):
+		x_dat[i] += random.uniform(-0.2,0.2)
+		y_dat[i] += random.uniform(-0.2,0.2)
+		z_dat[i] += random.uniform(-0.2,0.2)
+
+	x_dat = x_dat % Ngrid
+	y_dat = y_dat % Ngrid
+	z_dat = z_dat % Ngrid
 	
 	#And finally calculate the Zel'dovich velocities that are also scaled to the new grid
 	vx_dat = a_init*f0*H0*Dt*DFx
 	vy_dat = a_init*f0*H0*Dt*DFy
 	vz_dat = a_init*f0*H0*Dt*DFz
 
-	#print('Zeldovich velocities: ', vx_dat)
+	print('Zeldovich velocities: ', vx_dat)
 	
 	return x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat   
 
@@ -318,11 +349,8 @@ def potential(density, a):
 	ky, kz, kx = np.meshgrid(k_z, k_y, k_x)
 	k_squared = np.sin(kz/2)**2 + np.sin(ky/2)**2 + np.sin(kx/2)**2
 	
-	#Defining the resolution of the force grid in Mpc/cell
-	force_resolution = Lx/Ngrid
-	
 	#Defining Green's function
-	Greens_operator = -3*Omega_0/8/a*np.divide(1, k_squared, where=k_squared!=0)*force_resolution**2
+	Greens_operator = -3*Omega_0/8/a*np.divide(1, k_squared, where=k_squared!=0)
 	
 	#Convolving Fourier densities with Green's function to obtain the potential field in Fourier space
 	grid = Greens_operator*fft_density
@@ -332,6 +360,7 @@ def potential(density, a):
 	ifft_object = pyfftw.FFTW(grid, fft_grid, direction = 'FFTW_BACKWARD',axes=(0,1,2), threads = n_cpu)
 	grid = (ifft_object().real).astype('float')
 	
+
 	#Return the real space potential
 	return grid.real
 
@@ -343,7 +372,6 @@ def multi_particle_vector(x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, f_
 	#Unpack variables
 	Ngrid = box.Ngrid
 	Lx = box.Lx
-	force_resolution = Lx/Ngrid
 
 	#We again define the cell center coordinates for CIC interpolation
 	x = np.floor(x_dat).astype(int)
@@ -414,14 +442,13 @@ def multi_particle_vector(x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, f_
 	g_p_z = gz*t1 + gz_x*t2 + gz_y*t3 + gz_z*t4 + gz_xy*t5 + gz_xz*t6 + gz_yz*t7 + gz_xyz*t8
 	
 	#Calculate the new velocity at a+da
-	vx_datnew = vx_dat + da*f_a1*g_p_x/force_resolution
-	vy_datnew = vy_dat + da*f_a1*g_p_y/force_resolution
-	vz_datnew = vz_dat + da*f_a1*g_p_z/force_resolution
-	
-	#Drift for 0.5da - then kick - drift for 0.5da
-	x_dat = (x_dat + .5*da*vx_dat/a_val**2*f_a + .5*da*vx_datnew/(a_val+da)**2*f_a1) % Ngrid 
-	y_dat = (y_dat + .5*da*vy_dat/a_val**2*f_a + .5*da*vy_datnew/(a_val+da)**2*f_a1) % Ngrid
-	z_dat = (z_dat + .5*da*vz_dat/a_val**2*f_a + .5*da*vz_datnew/(a_val+da)**2*f_a1) % Ngrid
+	vx_datnew = vx_dat + da*f_a1*g_p_x
+	vy_datnew = vy_dat + da*f_a1*g_p_y
+	vz_datnew = vz_dat + da*f_a1*g_p_z
+
+	x_dat = (x_dat + da*vx_datnew/(a_val+da)**2*f_a1) % Ngrid 
+	y_dat = (y_dat + da*vy_datnew/(a_val+da)**2*f_a1) % Ngrid
+	z_dat = (z_dat + da*vz_datnew/(a_val+da)**2*f_a1) % Ngrid
 	
 	return x_dat, y_dat, z_dat, vx_datnew, vy_datnew, vz_datnew
 
@@ -453,7 +480,8 @@ def Dt(a, cosmology):
 	return 5/2/omegaM/(omegaM**(4/7) - omegaL + (1+omegaM/2)*(1+omegaL/70))*a
 
 def save_file(data, step, conv_pos, conv_vel):
-	#This function saves the data to disk
+	#This function saves the data to disk using XDMF formatting 
+	#to preserve compatibility with e.g. ParaView
 
 	import os
 	filename = 'Data/'
@@ -500,6 +528,7 @@ def simulator():
 	#Since the universe must have a certain average density, the particle mass
 	#in code units depends on the number of grid cells to particles cubed.
 	dens_contrast = (Ngrid/Npart)**3
+	
 	print('Particle mass in code units:', dens_contrast)
 	
 	#Resolution of mpc/cell
@@ -578,14 +607,14 @@ def simulator():
 power = 1.
 
 
-Npart = 100 #number of particles
-Ngrid = 100 #number of grid cells
+Npart = 150 #number of particles
+Ngrid = 256 #number of grid cells
  #number of grid cells
 Length_x = 150 #Mpc
 force_resolution = Length_x/Ngrid
 
 # number of cpu's in the machine the simulation will run on (used for faster fft)
-n_cpu = 4
+n_cpu = 8
 # random seed to use for the Gaussian Random Field (our Decennium 1 run used seed=38).
 seed = 38
 
