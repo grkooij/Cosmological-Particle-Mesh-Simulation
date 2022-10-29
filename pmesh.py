@@ -241,11 +241,15 @@ def Zeldovich(density_real):
 	ZAz = fft_ZAz_obj()
 
 	#Reshaping and correcting for scale with force resolution
-	DFx = np.reshape(ZAx, (Npart**3)).real
-	DFy = np.reshape(ZAy, (Npart**3)).real
-	DFz = np.reshape(ZAz, (Npart**3)).real
+	force_resolution = Ngrid/Lx
+
+	DFx = np.reshape(ZAx, (Npart**3)).real * force_resolution
+	DFy = np.reshape(ZAy, (Npart**3)).real * force_resolution
+	DFz = np.reshape(ZAz, (Npart**3)).real * force_resolution
 
 	print('Displacement field:', DFx)
+	print('Displacement field min:', min(DFx))
+	print('Displacement field max:', max(DFx))
 
 	#Define unperturbed lattice positions
 	#Has to be evenly distributed over a periodic box to prevent unwanted perturbations
@@ -501,6 +505,60 @@ def save_file(data, step, conv_pos, conv_vel):
 	
 	return
 
+def plot_step(box, savestep):
+	Ngrid = box.Ngrid
+	hf = h5py.File('Data/data.{}.hdf5'.format(savestep), 'r')
+
+	rho = np.array(hf.get('density'))[int(Ngrid/2),:,:]
+
+	fig, ax = plt.subplots()
+	ax.imshow(rho, extent = (0,Length_x,0,Length_x))
+	plt.savefig('Data/snapshots_density{}.png'.format(savestep))
+	plt.close()
+
+def plot_overview():
+	hf0 = h5py.File('Data/data.1.hdf5', 'r')
+	hf1 = h5py.File('Data/data.9.hdf5', 'r')
+	hf2 = h5py.File('Data/data.49.hdf5', 'r')
+	hf3 = h5py.File('Data/data.99.hdf5', 'r')
+
+	rho0 = np.array(hf0.get('density'))[int(Ngrid/2),:,:]
+	rho1 = np.array(hf1.get('density'))[int(Ngrid/2),:,:]
+	rho2 = np.array(hf2.get('density'))[int(Ngrid/2),:,:]
+	rho3 = np.array(hf3.get('density'))[int(Ngrid/2),:,:]
+
+	z = 1/np.linspace(a_init, 1, 100) - 1
+
+	f, ((ax1, ax2),(ax3,ax4)) = plt.subplots(2, 2)
+
+	ax1.imshow(rho0, extent = (0,Length_x,0,Length_x))
+	title = ax1.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
+					transform=ax1.transAxes, ha="center")
+	title.set_text('z = {:.2f}'.format(z[0]))
+
+	ax2.imshow(rho1, extent = (0,Length_x,0,Length_x))
+	title = ax2.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
+					transform=ax2.transAxes, ha="center")
+	title.set_text('z = {:.2f}'.format(z[9]))
+
+	ax3.imshow(rho2, extent = (0,Length_x,0,Length_x))
+	title = ax3.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
+					transform=ax3.transAxes, ha="center")
+	title.set_text('z = {:.2f}'.format(z[49]))
+
+	ax4.imshow(rho3, extent = (0,Length_x,0,Length_x))
+	title = ax4.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
+					transform=ax4.transAxes, ha="center")
+	title.set_text('z = {:.2f}'.format(z[-1]))
+
+	# save figures in the Data directory
+	plt.savefig('Data/snapshots_density.png')
+
+
+	print('Finished')
+	plt.show()
+
+
 def simulator():
 	#This is the main function - Call this to create initial conditions, 
 	#and solve the simulation for the given parameters
@@ -592,6 +650,7 @@ def simulator():
 
 				#Save results to disk
 				save_file([rho, x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat], s+1, unit_conv_pos, unit_conv_vel)
+				plot_step(box, s+1)
 				
 				#Print percentage finished
 				clear_output(wait=True)
@@ -605,7 +664,6 @@ def simulator():
 
 #Harrison Zeldovich spectrum has n~1
 power = 1.
-
 
 Npart = 150 #number of particles
 Ngrid = 256 #number of grid cells
@@ -644,44 +702,5 @@ print("Finished in")
 print("--- %s seconds ---" % (time() - start_time))
 
 print('Started plotting density snapshots for z = [99, 9, 1, 0]...')
+plot_overview()
 
-hf0 = h5py.File('Data/data.1.hdf5', 'r')
-hf1 = h5py.File('Data/data.9.hdf5', 'r')
-hf2 = h5py.File('Data/data.49.hdf5', 'r')
-hf3 = h5py.File('Data/data.99.hdf5', 'r')
-
-rho0 = np.array(hf0.get('density'))[int(Ngrid/2),:,:]
-rho1 = np.array(hf1.get('density'))[int(Ngrid/2),:,:]
-rho2 = np.array(hf2.get('density'))[int(Ngrid/2),:,:]
-rho3 = np.array(hf3.get('density'))[int(Ngrid/2),:,:]
-
-z = 1/np.linspace(a_init, 1, 100) - 1
-
-f, ((ax1, ax2),(ax3,ax4)) = plt.subplots(2, 2)
-
-ax1.imshow(rho0, extent = (0,Length_x,0,Length_x))
-title = ax1.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-				transform=ax1.transAxes, ha="center")
-title.set_text('z = {:.2f}'.format(z[0]))
-
-ax2.imshow(rho1, extent = (0,Length_x,0,Length_x))
-title = ax2.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-				transform=ax2.transAxes, ha="center")
-title.set_text('z = {:.2f}'.format(z[9]))
-
-ax3.imshow(rho2, extent = (0,Length_x,0,Length_x))
-title = ax3.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-				transform=ax3.transAxes, ha="center")
-title.set_text('z = {:.2f}'.format(z[49]))
-
-ax4.imshow(rho3, extent = (0,Length_x,0,Length_x))
-title = ax4.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-				transform=ax4.transAxes, ha="center")
-title.set_text('z = {:.2f}'.format(z[-1]))
-
-# save figures in the Data directory
-plt.savefig('Data/snapshots_density.png')
-
-
-print('Finished')
-plt.show()
