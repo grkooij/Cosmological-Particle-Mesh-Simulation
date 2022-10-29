@@ -263,30 +263,30 @@ def Zeldovich(density_real):
 
 	#And we perturb using Zel'dovich approximation, and correct for the scale of the force grid
 	#And additionally we add a %Ngrid to enforce periodic boundaries
-	x_dat = (np.reshape(x_unpert, Npart*Npart*Npart) + Dt*DFx) 
+	x = (np.reshape(x_unpert, Npart*Npart*Npart) + Dt*DFx) 
 	y_dat = (np.reshape(y_unpert, Npart*Npart*Npart) + Dt*DFy) 
 	z_dat = (np.reshape(z_unpert, Npart*Npart*Npart) + Dt*DFz) 
 
-	for i in range(len(x_dat)):
-		x_dat[i] += random.uniform(-0.2,0.2)
+	for i in range(len(x)):
+		x[i] += random.uniform(-0.2,0.2)
 		y_dat[i] += random.uniform(-0.2,0.2)
 		z_dat[i] += random.uniform(-0.2,0.2)
 
-	x_dat = x_dat % Ngrid
+	x = x % Ngrid
 	y_dat = y_dat % Ngrid
 	z_dat = z_dat % Ngrid
 	
 	#And finally calculate the Zel'dovich velocities that are also scaled to the new grid
-	vx_dat = a_init*f0*H0*Dt*DFx
+	vx = a_init*f0*H0*Dt*DFx
 	vy_dat = a_init*f0*H0*Dt*DFy
 	vz_dat = a_init*f0*H0*Dt*DFz
 
-	print('Zeldovich velocities: ', vx_dat)
+	print('Zeldovich velocities: ', vx)
 	
-	return x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat   
+	return x,y_dat,z_dat,vx,vy_dat,vz_dat   
 
 
-def density(x_dat, y_dat, z_dat, mass):
+def density(x, y_dat, z_dat, mass):
 	
 
 	#Unpack variables
@@ -296,12 +296,12 @@ def density(x_dat, y_dat, z_dat, mass):
 	grid = np.zeros([Ngrid, Ngrid, Ngrid], dtype='float64')
 
 	#Find cell center coordinates
-	x_c = np.floor(x_dat).astype(int)
+	x_c = np.floor(x).astype(int)
 	y_c = np.floor(y_dat).astype(int)
 	z_c = np.floor(z_dat).astype(int)
 		
 	#Calculating contributions for the CIC interpolation
-	d_x = x_dat - x_c
+	d_x = x - x_c
 	d_y = y_dat - y_c
 	d_z = z_dat - z_c
 	
@@ -369,7 +369,7 @@ def potential(density, a):
 	return grid.real
 
 
-def multi_particle_vector(x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, f_a, f_a1, da, potentials):
+def multi_particle_vector(x, y_dat, z_dat, vx, vy_dat, vz_dat, a_val, f_a, f_a1, da, potentials):
 	#This function calculates the momenta from the potential field
 	#and updates particle position and momentum
 
@@ -378,11 +378,11 @@ def multi_particle_vector(x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, f_
 	Lx = box.Lx
 
 	#We again define the cell center coordinates for CIC interpolation
-	x = np.floor(x_dat).astype(int)
+	x = np.floor(x).astype(int)
 	y = np.floor(y_dat).astype(int)
 	z = np.floor(z_dat).astype(int)
 	
-	d_x = x_dat - x
+	d_x = x - x
 	d_y = y_dat - y
 	d_z = z_dat - z
 
@@ -446,15 +446,15 @@ def multi_particle_vector(x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, f_
 	g_p_z = gz*t1 + gz_x*t2 + gz_y*t3 + gz_z*t4 + gz_xy*t5 + gz_xz*t6 + gz_yz*t7 + gz_xyz*t8
 	
 	#Calculate the new velocity at a+da
-	vx_datnew = vx_dat + da*f_a1*g_p_x
+	vxnew = vx + da*f_a1*g_p_x
 	vy_datnew = vy_dat + da*f_a1*g_p_y
 	vz_datnew = vz_dat + da*f_a1*g_p_z
 
-	x_dat = (x_dat + da*vx_datnew/(a_val+da)**2*f_a1) % Ngrid 
+	x = (x + da*vxnew/(a_val+da)**2*f_a1) % Ngrid 
 	y_dat = (y_dat + da*vy_datnew/(a_val+da)**2*f_a1) % Ngrid
 	z_dat = (z_dat + da*vz_datnew/(a_val+da)**2*f_a1) % Ngrid
 	
-	return x_dat, y_dat, z_dat, vx_datnew, vy_datnew, vz_datnew
+	return x, y_dat, z_dat, vxnew, vy_datnew, vz_datnew
 
 def H(a, H0, cosmology):
 	#This function calculates the Hubble constant
@@ -610,10 +610,10 @@ def simulator():
 	
 	#Calculating Zel'dovich displacements
 	print('Calculating Zeldovich displacements...')
-	x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat = Zeldovich(density_real)
+	x,y_dat,z_dat,vx,vy_dat,vz_dat = Zeldovich(density_real)
 	
 	#Saving the first step to disk
-	save_file([density_real, x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat], 0, unit_conv_pos, unit_conv_vel)    
+	save_file([density_real, x,y_dat,z_dat,vx,vy_dat,vz_dat], 0, unit_conv_pos, unit_conv_vel)    
  
 	#We then loop over the amount of savesteps we want
 	print('Starting the integrations...')
@@ -634,13 +634,13 @@ def simulator():
 			a_val = a_init
 			
 			#Find the densities
-			rho = density(x_dat, y_dat, z_dat, dens_contrast) 
+			rho = density(x, y_dat, z_dat, dens_contrast) 
 
 			#Solve Poissons equation to obtain the potential       
 			potentials = potential(rho, a_val) 
 
 			#Integrating
-			x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat = multi_particle_vector(x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, facto, factoplus1, da, potentials)
+			x, y_dat, z_dat, vx, vy_dat, vz_dat = multi_particle_vector(x, y_dat, z_dat, vx, vy_dat, vz_dat, a_val, facto, factoplus1, da, potentials)
 			
 			#Updating the time
 			a_init += da
@@ -649,7 +649,7 @@ def simulator():
 			if t == steps-2:
 
 				#Save results to disk
-				save_file([rho, x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat], s+1, unit_conv_pos, unit_conv_vel)
+				save_file([rho, x, y_dat, z_dat, vx, vy_dat, vz_dat], s+1, unit_conv_pos, unit_conv_vel)
 				plot_step(box, s+1)
 				
 				#Print percentage finished
@@ -665,14 +665,14 @@ def simulator():
 #Harrison Zeldovich spectrum has n~1
 power = 1.
 
-Npart = 150 #number of particles
+Npart = 100 #number of particles
 Ngrid = 256 #number of grid cells
  #number of grid cells
 Length_x = 150 #Mpc
 force_resolution = Length_x/Ngrid
 
 # number of cpu's in the machine the simulation will run on (used for faster fft)
-n_cpu = 8
+n_cpu = 4
 # random seed to use for the Gaussian Random Field (our Decennium 1 run used seed=38).
 seed = 38
 
