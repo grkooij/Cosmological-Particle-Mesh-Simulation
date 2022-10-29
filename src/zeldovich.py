@@ -84,22 +84,22 @@ def zeldovich(box, cosm, density_real):
 
 	#And we perturb using Zel'dovich approximation, and correct for the scale of the force grid
 	#And additionally we add a %Ngrid to enforce periodic boundaries
-	x = (np.reshape(x_unpert, Npart*Npart*Npart) + Dt*DFx) 
+	x_dat = (np.reshape(x_unpert, Npart*Npart*Npart) + Dt*DFx) 
 	y_dat = (np.reshape(y_unpert, Npart*Npart*Npart) + Dt*DFy) 
 	z_dat = (np.reshape(z_unpert, Npart*Npart*Npart) + Dt*DFz) 
 
-	for i in range(len(x)):
-		x[i] += random.uniform(-0.2,0.2)
+	for i in range(len(x_dat)):
+		x_dat[i] += random.uniform(-0.2,0.2)
 		y_dat[i] += random.uniform(-0.2,0.2)
 		z_dat[i] += random.uniform(-0.2,0.2)
 
-	x = x % Ngrid
+	x_dat = x_dat % Ngrid
 	y_dat = y_dat % Ngrid
 	z_dat = z_dat % Ngrid
 	
 	#And finally calculate the Zel'dovich velocities that are also scaled to the new grid
-	vx = a_init*f0*H0*Dt*DFx
+	vx_dat = a_init*f0*H0*Dt*DFx
 	vy_dat = a_init*f0*H0*Dt*DFy
 	vz_dat = a_init*f0*H0*Dt*DFz
 	
-	return x,y_dat,z_dat,vx,vy_dat,vz_dat   
+	return x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat   
