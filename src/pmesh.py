@@ -28,7 +28,7 @@ from zeldovich import zeldovich
 from gaussian_random_field import gaussian_random_field
 from cosmology import *
 from save_data import save_file
-from plot_helper import plot_step, plot_overview
+from plot_helper import plot_step, plot_overview, plot_grf
 
 
 class simbox:
@@ -89,7 +89,7 @@ def simulator(box, cos):
 	
 	#Saving the first step to disk
 	save_file([rho, x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat], 0, unit_conv_pos, unit_conv_vel)  
-	plot_step(box, 0)  
+	plot_grf(box)  
  
 	#We then loop over the amount of savesteps we want
 	print('Starting the integrations...')
@@ -137,8 +137,8 @@ if __name__ == "__main__":
 	#Harrison Zeldovich spectrum has n~1
 	power = 1.
 
-	Npart = 30 #number of particles
-	Ngrid = 80 #number of grid cells
+	Npart = 128 #number of particles
+	Ngrid = 256 #number of grid cells
 	Length_x = 150 #Mpc
 	force_resolution = Length_x/Ngrid
 
