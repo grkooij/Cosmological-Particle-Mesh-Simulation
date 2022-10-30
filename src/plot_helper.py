@@ -9,10 +9,10 @@ def plot_step(box, savestep):
 	length_x = box.Lx
 	hf = h5py.File('Data/data.{}.hdf5'.format(savestep), 'r')
 
-	rho = np.array(hf.get('density'))[int(Ngrid/2),:,:]
+	rho = np.array(hf.get('density'))[0,:,:]
 
 	fig, ax = plt.subplots()
-	ax.imshow(rho, extent = (0,length_x,0,length_x))
+	ax.imshow(rho, extent = (0,length_x,0,length_x), vmin=0., vmax=box.mass*2)
 	plt.savefig('Data/snapshots_density{}.png'.format(savestep))
 	plt.close()
 

@@ -41,8 +41,9 @@ class simbox:
 		self.n_cpu = n_cpu
 		self.stepspersavestep = stepspersavestep
 		self.savesteps = savesteps
+		self.mass = (Ngrid/Npart)**3
 
-def simulator():
+def simulator(box, cos):
 	#This is the main function - Call this to create initial conditions, 
 	#and solve the simulation for the given parameters
 
@@ -71,31 +72,24 @@ def simulator():
 	
 	print('Particle mass in code units: {:.3e}'.format(dens_contrast))
 	
-	#Resolution of mpc/cell
-	force_resolution = Lx/Ngrid
-	
 	#Defining an array of the scale factor that the simulation will loop over
 	a = np.linspace(a_init, 1, steps*savesteps)
 	
 	#The stepsize of the scale factor
 	da = a[1] - a_init
-
-	#Cosmology used in GRF and Zel'dovich approximation
-	H01 = H(a_init,H0, cosmology)
-	f0 = f(a_init, cosmology)
-	Dt0 = Dt(a_init, cosmology)
 	
 	#Creating initial conditions with GRF and Zeldovich displacement
 	#First step is the Gaussian Random Field
 	print('Preparing the Gaussian random field...')
-	density_real = gaussian_random_field(box, cos)
+	rho = gaussian_random_field(box, cos)
 	
 	#Calculating Zel'dovich displacements
 	print('Calculating Zeldovich displacements...')
-	x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat = zeldovich(box, cos, density_real)
+	x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat = zeldovich(box, cos, rho)
 	
 	#Saving the first step to disk
-	save_file([density_real, x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat], 0, unit_conv_pos, unit_conv_vel)    
+	save_file([rho, x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat], 0, unit_conv_pos, unit_conv_vel)  
+	plot_step(box, 0)  
  
 	#We then loop over the amount of savesteps we want
 	print('Starting the integrations...')
@@ -105,24 +99,17 @@ def simulator():
 		for t in range(steps-1):
 			
 			#Here we calculate the densities, potentials, forces and the velocities for each step
-
-			#Calculating the rough percentage finished
-			a_ind =  s*steps + t
-			percentile = 100*a_ind/(steps*savesteps) + 0.2
 			
 			#Calculating the cosmology variables required
 			facto = f(a_init, cosmology)
 			factoplus1 = f(a_init+da, cosmology)
 			a_val = a_init
 			
-			#Find the densities
 			rho = density(box, x_dat, y_dat, z_dat, dens_contrast) 
 
 			#Solve Poissons equation to obtain the potential       
-			potentials = potential(box, cos, rho, a_val) 
-
 			#Integrating
-			x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat = integrate(box, x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, facto, factoplus1, da, potentials)
+			x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat = integrate(box, x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, facto, factoplus1, da, potential(box, cos, rho, a_val))
 			
 			#Updating the time
 			a_init += da
@@ -133,9 +120,15 @@ def simulator():
 				#Save results to disk
 				save_file([rho, x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat], s+1, unit_conv_pos, unit_conv_vel)
 				plot_step(box, s+1)
+				print_status(s, t, steps)
 				
-				print('{}%'.format(percentile))
+				
 	return
+
+def print_status(s, t, steps):
+	a_ind =  s*steps + t
+	percentile = 100*a_ind/(steps*savesteps) + 0.2
+	print('{}%'.format(percentile))
 
 if __name__ == "__main__":
 
@@ -144,8 +137,8 @@ if __name__ == "__main__":
 	#Harrison Zeldovich spectrum has n~1
 	power = 1.
 
-	Npart = 150 #number of particles
-	Ngrid = 256 #number of grid cells
+	Npart = 30 #number of particles
+	Ngrid = 80 #number of grid cells
 	Length_x = 150 #Mpc
 	force_resolution = Length_x/Ngrid
 
@@ -174,7 +167,7 @@ if __name__ == "__main__":
 	start_time = time()
 
 	#Calling the main function
-	simulator()
+	simulator(box, cos)
 
 	print("Finished in")
 	print("--- %s seconds ---" % (time() - start_time))
