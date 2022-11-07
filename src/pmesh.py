@@ -28,7 +28,7 @@ from zeldovich import zeldovich
 from gaussian_random_field import gaussian_random_field
 from cosmology import *
 from save_data import save_file
-from plot_helper import plot_step, plot_overview
+from plot_helper import plot_step, plot_overview, plot_grf
 
 
 class simbox:
@@ -85,18 +85,18 @@ def simulator(box, cos):
 	
 	#Calculating Zel'dovich displacements
 	print('Calculating Zeldovich displacements...')
-	x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat = zeldovich(box, cos, rho)
+	positions, velocities = zeldovich(box, cos, rho)
 	
 	#Saving the first step to disk
-	save_file([rho, x_dat,y_dat,z_dat,vx_dat,vy_dat,vz_dat], 0, unit_conv_pos, unit_conv_vel)  
-	plot_step(box, 0)  
+	save_file([rho, positions[0], positions[1], positions[2], velocities[0], velocities[1], velocities[2]], 0, unit_conv_pos, unit_conv_vel)  
+	plot_grf(box, 0)  
  
 	#We then loop over the amount of savesteps we want
 	print('Starting the integrations...')
 	for s in range(savesteps):    
-		
+		start_time = time()
 		#And loop over the number of steps per savestep 
-		for t in range(steps-1):
+		for t in range(steps):
 			
 			#Here we calculate the densities, potentials, forces and the velocities for each step
 			
@@ -105,30 +105,30 @@ def simulator(box, cos):
 			factoplus1 = f(a_init+da, cosmology)
 			a_val = a_init
 			
-			rho = density(box, x_dat, y_dat, z_dat, dens_contrast) 
+			rho = density(box.Ngrid, positions, dens_contrast) 
 
 			#Solve Poissons equation to obtain the potential       
 			#Integrating
-			x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat = integrate(box, x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat, a_val, facto, factoplus1, da, potential(box, cos, rho, a_val))
+			
+			positions, velocities = integrate(box, positions, velocities, a_val, facto, factoplus1, da, potential(box, cos, rho, a_val))
 			
 			#Updating the time
 			a_init += da
 			
 			#Saving the data after savesteps
 			if t == steps-2:
-
+				
 				#Save results to disk
-				save_file([rho, x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat], s+1, unit_conv_pos, unit_conv_vel)
+				save_file([rho, positions[0], positions[1], positions[2], velocities[0], velocities[1], velocities[2]], s+1, unit_conv_pos, unit_conv_vel)
 				plot_step(box, s+1)
-				print_status(s, t, steps)
-				
-				
+				print_status(s, t, steps, start_time)
+						
 	return
 
-def print_status(s, t, steps):
+def print_status(s, t, steps, start_time):
 	a_ind =  s*steps + t
 	percentile = 100*a_ind/(steps*savesteps) + 0.2
-	print('{}%'.format(percentile))
+	print('{}%'.format(percentile), "Save step time: --- %s seconds ---" % (time() - start_time))
 
 if __name__ == "__main__":
 
@@ -137,8 +137,8 @@ if __name__ == "__main__":
 	#Harrison Zeldovich spectrum has n~1
 	power = 1.
 
-	Npart = 30 #number of particles
-	Ngrid = 80 #number of grid cells
+	Npart = 256 #number of particles
+	Ngrid = 512 #number of grid cells
 	Length_x = 150 #Mpc
 	force_resolution = Length_x/Ngrid
 
