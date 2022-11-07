@@ -137,8 +137,8 @@ if __name__ == "__main__":
 	#Harrison Zeldovich spectrum has n~1
 	power = 1.
 
-	Npart = 256 #number of particles
-	Ngrid = 512 #number of grid cells
+	Npart = 128 #number of particles
+	Ngrid = 256 #number of grid cells
 	Length_x = 150 #Mpc
 	force_resolution = Length_x/Ngrid
 
