@@ -3,15 +3,16 @@ import random
 import pyfftw
 
 def zeldovich(box, cosm, density):
+	positions = np.zeros((3, box.Npart**3), dtype=np.float64)
+	velocities = np.zeros((3, box.Npart**3), dtype=np.float64)
+
 	directions = [0, 1, 2]
 
 	density = np.fft.fftn(density)
     #Split up to lower RAM usage
-	x_dat, vx_dat = zeldovich_one_direction(box, cosm, potential_k(box, density), directions[0])
-	y_dat, vy_dat = zeldovich_one_direction(box, cosm, potential_k(box, density), directions[1])
-	z_dat, vz_dat = zeldovich_one_direction(box, cosm, potential_k(box, density), directions[2])
-
-	return x_dat, y_dat, z_dat, vx_dat, vy_dat, vz_dat
+	for direction in directions:
+		positions[direction,:], velocities[direction] = zeldovich_one_direction(box, cosm, potential_k(box, density), direction)
+	return positions, velocities
 
 def potential_k(box, density_k):
 	Npart = box.Npart
@@ -90,7 +91,7 @@ def zeldovich_positions(box, cosm, displacement_field, direction):
 	positions += Dt*displacement_field
 
 	for i in range(len(positions)):
-		positions[i] += random.uniform(-.75,.75)
+		positions[i] += random.uniform(-1.,1.)
 
 	return positions%Ngrid
 
