@@ -1,18 +1,24 @@
+import numba as nb
 import numpy as np
 from numba import njit
-import numba as nb
+from potential import potential
 
-def integrate(box, positions, velocities, a_val, f_a, f_a1, da, potentials):
-	#This function calculates the momenta from the potential field
-	#and updates particle position and momentum
+def advance_time(box, cosm, density, positions, velocities, fgrid, a, fa1, da):
+
+	potentials = potential(box, cosm, density, fgrid, a)
+	
+	return integrate(positions, velocities, box.Ngrid, a, fa1, da, potentials)
+
+@njit(parallel=True)
+def integrate(positions, velocities, Ngrid, a_val, f_a1, da, potentials):
+
 	directions = [0,1,2]
 
-	cell_centers = np.floor(positions).astype(np.int64)
-	
+	cell_centers = np.floor(positions).astype(np.int64)	
 	t = weights(cell_centers, positions)
 
 	for direction in directions:
-		positions[direction], velocities[direction] = sweep_one_direction(cell_centers, positions[direction], velocities[direction], t, potentials, da, f_a1, a_val, box.Ngrid, direction)
+		positions[direction], velocities[direction] = sweep_one_direction(cell_centers, positions[direction], velocities[direction], t, potentials, da, f_a1, a_val, Ngrid, direction)
 	return positions, velocities
 
 @njit('(int64[:,:], float64[:,:])', parallel=True)
@@ -54,32 +60,32 @@ def sweep_one_direction(cell_centers, positions, velocities, t, potentials, da, 
 
 	cc_n[direction] = cell_centers[direction]-1
 	cc_p[direction] = (cell_centers[direction]+1)%Ngrid
-
-	x = cc_p[dir_x]
-	y = cc_p[dir_y]
-	z = cc_p[dir_z]
-
-	x2 = cc_n[dir_x]
-	y2 = cc_n[dir_y]
-	z2 = cc_n[dir_z]
-
-	X = (x+1)%Ngrid
-	Y = (y+1)%Ngrid
-	Z = (z+1)%Ngrid
-	X2 = (x2+1)%Ngrid
-	Y2 = (y2+1)%Ngrid
-	Z2 = (z2+1)%Ngrid
-
+	
 	for i in nb.prange(len(positions)):
 
-		g = (-potentials[z[i],y[i],x[i]] + potentials[z2[i],y2[i],x2[i]])
-		g_x = (-potentials[z[i],y[i],X[i]] + potentials[z2[i],y2[i],X2[i]])
-		g_y = (-potentials[z[i],Y[i],x[i]] + potentials[z2[i],Y2[i],x2[i]])
-		g_z = (-potentials[Z[i],y[i],x[i]] + potentials[Z2[i],y2[i],x2[i]])
-		g_xy = (-potentials[z[i],Y[i],X[i]] + potentials[z2[i],Y2[i],X2[i]])
-		g_xz = (-potentials[Z[i],y[i],X[i]] + potentials[Z2[i],y2[i],X2[i]])
-		g_yz = (-potentials[Z[i],Y[i],x[i]] + potentials[Z2[i],Y2[i],x2[i]])
-		g_xyz = (-potentials[Z[i],Y[i],X[i]] + potentials[Z2[i],Y2[i],X2[i]])
+		x = cc_p[dir_x, i]
+		y = cc_p[dir_y, i]
+		z = cc_p[dir_z, i]
+
+		x2 = cc_n[dir_x, i]
+		y2 = cc_n[dir_y, i]
+		z2 = cc_n[dir_z, i]
+
+		X = (x+1)%Ngrid
+		Y = (y+1)%Ngrid
+		Z = (z+1)%Ngrid
+		X2 = (x2+1)%Ngrid
+		Y2 = (y2+1)%Ngrid
+		Z2 = (z2+1)%Ngrid
+
+		g = (-potentials[z,y,x] + potentials[z2,y2,x2])
+		g_x = (-potentials[z,y,X] + potentials[z2,y2,X2])
+		g_y = (-potentials[z,Y,x] + potentials[z2,Y2,x2])
+		g_z = (-potentials[Z,y,x] + potentials[Z2,y2,x2])
+		g_xy = (-potentials[z,Y,X] + potentials[z2,Y2,X2])
+		g_xz = (-potentials[Z,y,X] + potentials[Z2,y2,X2])
+		g_yz = (-potentials[Z,Y,x] + potentials[Z2,Y2,x2])
+		g_xyz = (-potentials[Z,Y,X] + potentials[Z2,Y2,X2])
 		g_p[i] = (g*t[0,i] + g_x*t[1,i] + g_y*t[2,i] + g_z*t[3,i] + g_xy*t[4,i] + g_xz*t[5,i] + g_yz*t[6,i] + g_xyz*t[7,i])/2.
 
 	velocities += da*f_a1*g_p

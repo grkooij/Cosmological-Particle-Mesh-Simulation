@@ -1,7 +1,7 @@
 # Cosmological-Particle-Mesh-Simulation
 Python code to create a simple cosmological particle mesh simulation for a lambda cold dark-matter universe.
 
-Runtime for 1000 timesteps with 256^3 particles and 512^3 grid cells is, on my old i7 laptop, ~5 hours using ~8 GB RAM.
+Runtime for 1000 timesteps with 256^3 particles and 512^3 grid cells is ~1 hour using ~7 GB RAM on a Windows os with a 13th gen 16-core Raptor lake.
 
 Set variables in pmesh.py and run with `python pmesh.py`.
 

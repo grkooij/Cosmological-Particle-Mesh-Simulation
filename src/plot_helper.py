@@ -1,5 +1,6 @@
 import numpy as np
-import matplotlib
+import matplotlib.colors as colors
+from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 import h5py
 
@@ -13,6 +14,8 @@ def plot_step(box, savestep):
 
 	fig, ax = plt.subplots()
 	ax.imshow(rho, extent = (0,length_x,0,length_x), vmin=0., vmax=box.mass*3, cmap='viridis')
+	ax.set_xlabel("Mpc/h")
+	ax.set_ylabel("Mpc/h")
 	plt.savefig('Data/snapshots_density{}.png'.format(savestep), dpi=600, bbox_inches='tight')
 	plt.close()
 
@@ -72,3 +75,25 @@ def plot_overview(box, cosm):
 
 	print('Finished')
 	plt.show()
+
+def plot_projection(boxsize, mass, savestep, depth):
+	cmap = colors.LinearSegmentedColormap.from_list("", ["black", "steelblue", "white", "yellow", "orange", "darkred"])
+	cmap.set_bad((0,0,0))
+
+	n_slices = np.int32(boxsize/depth)
+
+	length_x = boxsize
+	hf = h5py.File('Data/data.{}.hdf5'.format(savestep), 'r')
+
+	rho = np.array(hf.get('density'))[0,:,:]
+
+	for i in range(n_slices):
+		rho += np.array(hf.get('density'))[i,:,:]
+
+	fig, ax = plt.subplots()
+	ax.imshow(rho/n_slices, extent = (0,length_x,0,length_x), norm=LogNorm(vmin=0.2, vmax=mass*10), cmap=cmap)
+	ax.set_xlabel("Mpc/h")
+	ax.set_ylabel("Mpc/h")
+
+	plt.savefig('Data/projection_density{}.png'.format(savestep), dpi=600, bbox_inches='tight')
+	plt.close()
