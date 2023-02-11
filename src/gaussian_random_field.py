@@ -25,18 +25,18 @@ def gaussian_random_numbers(box):
 	u = np.zeros((Npart**3), dtype = 'float32')
 	v = np.zeros((Npart**3), dtype = 'float32')
 	
-	n_parts = 0
+	n_parts_accepted = 0
 	
-	while n_parts < Npart**3:
-		u1 = np.random.uniform(-1,1, Npart**3-n_parts)
-		v1 = np.random.uniform(-1,1, Npart**3-n_parts)
+	while n_parts_accepted < Npart**3:
+		u1 = np.random.uniform(-1,1, Npart**3-n_parts_accepted)
+		v1 = np.random.uniform(-1,1, Npart**3-n_parts_accepted)
 		sq = u1**2 + v1**2
 		u1 = u1[np.nonzero((0. < sq) & (sq < 1.))]
 		v1 = v1[np.nonzero((0. < sq) & (sq < 1.))]
 
-		u[n_parts:n_parts+len(u1)] = u1
-		v[n_parts:n_parts+len(v1)] = v1
-		n_parts += len(u1)
+		u[n_parts_accepted:n_parts_accepted+len(u1)] = u1
+		v[n_parts_accepted:n_parts_accepted+len(v1)] = v1
+		n_parts_accepted += len(u1)
 			
 	#Transformation from uniform to Gaussian Random numbers
 	s = u**2+v**2
