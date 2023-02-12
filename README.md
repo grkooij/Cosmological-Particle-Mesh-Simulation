@@ -5,5 +5,6 @@ Runtime for 1000 timesteps with 256^3 particles and 512^3 grid cells is ~1 hour 
 
 Set variables in pmesh.py and run with `python pmesh.py`.
 
-Example .gif result for a thin projection of the density for a simulation including 256^3 particles on a 512^3 grid:
+Example PNG for a 15 Mpc/h projection of the density for a simulation including 512^3 particles on a 1024^3 grid:
+
 ![256gif](https://github.com/grkooij/Cosmological-Particle-Mesh-Simulation/blob/master/cosmological_simulation.png)
