@@ -1,99 +1,53 @@
 import numpy as np
 import matplotlib.colors as colors
 from matplotlib.colors import LogNorm
+from numba import njit
 import matplotlib.pyplot as plt
 import h5py
 
 
-def plot_step(box, savestep):
-	Ngrid = box.Ngrid
+def plot_step(rho, box, savestep):
 	length_x = box.Lx
-	hf = h5py.File('Data/data.{}.hdf5'.format(savestep), 'r')
-
-	rho = np.array(hf.get('density'))[0,:,:]
 
 	fig, ax = plt.subplots()
-	ax.imshow(rho, extent = (0,length_x,0,length_x), vmin=0., vmax=box.mass*3, cmap='viridis')
+	ax.imshow(rho[0,:,:], extent = (0,length_x,0,length_x), vmin=0., vmax=box.mass*3, cmap='viridis')
 	ax.set_xlabel("Mpc/h")
 	ax.set_ylabel("Mpc/h")
 	plt.savefig('Data/snapshots_density{}.png'.format(savestep), dpi=600, bbox_inches='tight')
 	plt.close()
 
-def plot_grf(box, savestep):
-	Ngrid = box.Ngrid
-	length_x = box.Lx
-	hf = h5py.File('Data/data.{}.hdf5'.format(savestep), 'r')
+def plot_grf(rho, box):
 
-	rho = np.array(hf.get('density'))[0,:,:]
+	length_x = box.Lx
+	rho = rho[0,:,:]
 
 	fig, ax = plt.subplots()
 	ax.imshow(rho, extent = (0,length_x,0,length_x), vmin=-1., vmax=np.max(rho), cmap='viridis')
 	plt.savefig('Data/snapshot_grf.png', dpi=600, bbox_inches='tight')
 	plt.close()
 
-def plot_overview(box, cosm):
-	n_grid = box.Ngrid
-	length_x = box.Lx
-	a_init = cosm.a_init
-
-	hf0 = h5py.File('Data/data.1.hdf5', 'r')
-	hf1 = h5py.File('Data/data.9.hdf5', 'r')
-	hf2 = h5py.File('Data/data.49.hdf5', 'r')
-	hf3 = h5py.File('Data/data.99.hdf5', 'r')
-
-	rho0 = np.array(hf0.get('density'))[int(n_grid/2),:,:]
-	rho1 = np.array(hf1.get('density'))[int(n_grid/2),:,:]
-	rho2 = np.array(hf2.get('density'))[int(n_grid/2),:,:]
-	rho3 = np.array(hf3.get('density'))[int(n_grid/2),:,:]
-
-	z = 1/np.linspace(a_init, 1, 100) - 1
-
-	f, ((ax1, ax2),(ax3,ax4)) = plt.subplots(2, 2)
-
-	ax1.imshow(rho0, extent = (0,length_x,0,length_x))
-	title = ax1.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-					transform=ax1.transAxes, ha="center")
-	title.set_text('z = {:.2f}'.format(z[0]))
-
-	ax2.imshow(rho1, extent = (0,length_x,0,length_x))
-	title = ax2.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-					transform=ax2.transAxes, ha="center")
-	title.set_text('z = {:.2f}'.format(z[9]))
-
-	ax3.imshow(rho2, extent = (0,length_x,0,length_x))
-	title = ax3.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-					transform=ax3.transAxes, ha="center")
-	title.set_text('z = {:.2f}'.format(z[49]))
-
-	ax4.imshow(rho3, extent = (0,length_x,0,length_x))
-	title = ax4.text(0.5,0.9, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-					transform=ax4.transAxes, ha="center")
-	title.set_text('z = {:.2f}'.format(z[-1]))
-
-	# save figures in the Data directory
-	plt.savefig('Data/snapshots_density.png')
-
-	print('Finished')
-	plt.show()
-
-def plot_projection(boxsize, mass, savestep, depth):
+def plot_projection(rho, boxsize, mass, savestep, depth):
 	cmap = colors.LinearSegmentedColormap.from_list("", ["black", "steelblue", "white", "yellow", "orange", "darkred"])
 	cmap.set_bad((0,0,0))
 
 	n_slices = np.int32(boxsize/depth)
 
 	length_x = boxsize
-	hf = h5py.File('Data/data.{}.hdf5'.format(savestep), 'r')
 
-	rho = np.array(hf.get('density'))[0,:,:]
-
-	for i in range(n_slices):
-		rho += np.array(hf.get('density'))[i,:,:]
-
+	projection = project(rho, n_slices)
 	fig, ax = plt.subplots()
-	ax.imshow(rho/n_slices, extent = (0,length_x,0,length_x), norm=LogNorm(vmin=0.2, vmax=mass*10), cmap=cmap)
+	ax.imshow(projection/n_slices, extent = (0,length_x,0,length_x), norm=LogNorm(vmin=0.2, vmax=mass*10), cmap=cmap)
 	ax.set_xlabel("Mpc/h")
 	ax.set_ylabel("Mpc/h")
 
 	plt.savefig('Data/projection_density{}.png'.format(savestep), dpi=600, bbox_inches='tight')
 	plt.close()
+
+@njit
+def project(rho, n_slices):
+	projection = np.zeros(np.shape(rho[0,:,:]), dtype=np.float64)
+
+	for i in range(n_slices):
+		projection += rho[i,:,:]
+	
+	return projection

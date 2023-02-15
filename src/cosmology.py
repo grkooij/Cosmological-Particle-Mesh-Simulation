@@ -1,11 +1,11 @@
 import numpy as np
 
 class cosmo:
-	def __init__(self, H0, omega_b, omega_m0, omega_lambda0, omega_k0, power, a_init):
+	def __init__(self, H0, omega_m0, omega_b, omega_lambda0, omega_k0, power, a_init):
 		self.H0 = H0
-		self.omega_b = omega_b
 		self.powspec = power
 		self.omega_m0 = omega_m0
+		self.omega_b = omega_b
 		self.omega_lambda0 = omega_lambda0
 		self.omega_k0 = omega_k0
 		self.a_init = a_init
