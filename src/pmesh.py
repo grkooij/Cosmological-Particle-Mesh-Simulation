@@ -15,6 +15,7 @@
 """
 
 import numpy as np
+import numba as nb
 
 from time import time  
 
@@ -25,19 +26,22 @@ from fourier_utils import fourier_grid
 from gaussian_random_field import gaussian_random_field
 from cosmology import *
 from save_data import save_file
-from plot_helper import plot_step, plot_overview, plot_grf, plot_projection
+from plot_helper import plot_step, plot_grf, plot_projection
 
+from configure_me import N_CELLS, N_PARTS, BOX_SIZE, N_CPU, STEPS, N_SAVE_FILES, RANDOM_SEED
+from configure_me import POWER, OMEGA_M0, OMEGA_B0, OMEGA_K0, OMEGA_LAMBDA0, H0, A_INIT
+from configure_me import SAVE_DATA, PLOT_STEPS, PLOT_PROJECTIONS, PRINT_STATUS
 
 class simbox:
-	def __init__(self, Npart, Ngrid, Lx, n_cpu, seed, force_resolution, stepspersavestep, savesteps):
+	def __init__(self, Npart, Ngrid, Lx, n_cpu, seed, n_save_files, steps):
 		self.Npart = Npart
 		self.Ngrid = Ngrid
 		self.Lx = Lx
-		self.force_resolution = force_resolution
+		self.force_resolution = Lx/Ngrid
 		self.seed = seed
 		self.n_cpu = n_cpu
-		self.stepspersavestep = stepspersavestep
-		self.savesteps = savesteps
+		self.steps = steps
+		self.savesteps = n_save_files
 		self.mass = (Ngrid/Npart)**3
 
 def simulator(box, cos):
@@ -46,8 +50,7 @@ def simulator(box, cos):
 	Npart = box.Npart
 	Ngrid = box.Ngrid
 	Lx = box.Lx
-	steps = box.stepspersavestep
-	savesteps = box.savesteps
+	steps = box.steps
 	a_current = cos.a_init
 	H0 = cos.H0
 	cosmology = [H0, cos.omega_lambda0, cos.omega_k0]
@@ -59,7 +62,7 @@ def simulator(box, cos):
 	print('Particle mass in solar mass for this configuration: {:.3E}'.format(particle_mass))
 
 	unit_conv_pos = 7.8*(Lx/(Ngrid/128))/10**3 #Mpc
-	unit_conv_vel = 0.781*Lx*H0/(a_init*Ngrid/128) #km/s
+	unit_conv_vel = 0.781*Lx*H0/(a_current*Ngrid/128) #km/s
 
 	#Since the universe must have a certain average density, the particle mass
 	#in code units depends on the number of grid cells to particles cubed.
@@ -68,8 +71,10 @@ def simulator(box, cos):
 	print('Particle mass in code units: {:.3e}'.format(dens_contrast))
 	
 	#Defining an array of the scale factor that the simulation will loop over
-	a = np.linspace(a_init, 1, steps*savesteps)
-	da = a[1] - a_init
+	a = np.linspace(a_current, 1., steps)
+	da = a[1] - a_current
+	da_save = (a[-1] - a[0])/N_SAVE_FILES
+	n_file = 0
 	
 	#Creating initial conditions with GRF and Zeldovich displacement
 	print('Preparing the Gaussian random field...')
@@ -82,80 +87,53 @@ def simulator(box, cos):
 	ksq_inverse = fourier_grid(box)
 	
 	#Saving the first step to disk
-	save_file([rho, positions[0], positions[1], positions[2], velocities[0], velocities[1], velocities[2]], 0, unit_conv_pos, unit_conv_vel)  
-	plot_grf(box, 0)  
+	if SAVE_DATA:
+		save_file(rho, positions, velocities, 0, unit_conv_pos, unit_conv_vel)
+		n_file += 1
+
+	if PLOT_STEPS:
+		plot_grf(rho, box)  
  
-	#We then loop over the amount of savesteps we want
 	print('Starting the integrations...')
-	for s in range(savesteps):    
+	for s in range(steps):   
+
 		start_time = time()
-		#And loop over the number of steps per savestep 
-		for t in range(steps):
+		
+		fa1 = f(a_current+da, cosmology)
 
-			fa1 = f(a_current+da, cosmology)
+		rho = density(box.Ngrid, positions, dens_contrast)
+		positions, velocities = advance_time(box, cos, rho, positions, velocities, ksq_inverse, a_current, fa1, da)
 
-			rho = density(box.Ngrid, positions, dens_contrast)
-			positions, velocities = advance_time(box, cos, rho, positions, velocities, ksq_inverse, a_current, fa1, da)
-
-			#Updating the time
-			a_current += da
-			
-			#Saving the data after savesteps
-			if t == steps-2:
+		#Updating the time
+		a_current += da
+		
+		if SAVE_DATA:
+			if a_current >= n_file*da_save:
 				
-				if SAVE_DATA:
-					save_file([rho, positions[0], positions[1], positions[2], velocities[0], velocities[1], velocities[2]], s+1, unit_conv_pos, unit_conv_vel)
+				save_file(rho, positions, velocities, n_file, unit_conv_pos, unit_conv_vel)
+
 				if PLOT_STEPS:
-					plot_step(box, s+1)
+					plot_step(rho, box, n_file)
 				if PLOT_PROJECTIONS:
-					plot_projection(box.Lx, box.mass, s+1, 15)
-				if PRINT_STATUS:
-					print_status(s, t, steps, start_time)
+					plot_projection(rho, box.Lx, box.mass, n_file, 15)
+
+				n_file += 1
+
+		if PRINT_STATUS:
+			print_status(s, steps, start_time)
 						
 	return
 
-def print_status(s, t, steps, start_time):
-	a_ind =  s*steps + t
-	percentile = 100*a_ind/(steps*savesteps) + 0.2
+def print_status(s, steps, start_time):
+
+	percentile = 100*s/steps
 	print('{}%'.format(percentile), "Save step time: --- %.5f seconds ---" % (time() - start_time))
 
 if __name__ == "__main__":
 
-	#Defining Simulation properties
-
-	#Harrison Zeldovich spectrum has n~1
-	power = 1.
-
-	Npart = 256 #number of particles
-	Ngrid = 512 #number of grid cells
-	Length_x = 100 #Mpc
-	force_resolution = Length_x/Ngrid
-
-	# number of cpu's in the machine the simulation will run on (used for faster fft)
-	n_cpu = 16
-	# random seed to use for the Gaussian Random Field.
-	seed = 38
-
-	stepspersavestep = 10
-	savesteps = 100
-
-	#Lambda CDM
-	omega_m0 = 0.31
-	omega_k0 = 0. 
-	omega_lambda0 = 0.69
-	omega_b = 0.04
-	H0_LCDM = 0.68
-
-	#Initial value of the scale factor
-	a_init = 0.01
-
-	box = simbox(Npart, Ngrid, Length_x, n_cpu, seed, force_resolution, stepspersavestep, savesteps)
-	cos = cosmo(H0_LCDM, omega_b, omega_m0, omega_lambda0, omega_k0, power, a_init)
-
-	PLOT_STEPS = True
-	PLOT_PROJECTIONS = True
-	SAVE_DATA = True
-	PRINT_STATUS = True
+	box = simbox(N_PARTS, N_CELLS, BOX_SIZE, N_CPU, RANDOM_SEED, N_SAVE_FILES, STEPS)
+	cos = cosmo(H0, OMEGA_M0, OMEGA_B0, OMEGA_LAMBDA0, OMEGA_K0, POWER, A_INIT)
+	nb.set_num_threads(N_CPU)
 
 	#Time how long it runs
 	start_time = time()
@@ -165,7 +143,3 @@ if __name__ == "__main__":
 
 	print("Finished in")
 	print("--- %s seconds ---" % (time() - start_time))
-
-	print('Started plotting density snapshots for z = [99, 9, 1, 0]...')
-	plot_overview(box, cos)
-
