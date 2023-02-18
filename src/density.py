@@ -2,11 +2,13 @@ import numpy as np
 from numba import njit
 import numba as nb
 
+from configure_me import N_CELLS
+
 @njit(parallel=True)
-def density(Ngrid, positions, mass):
+def density(positions, mass):
 
 	#Create a new grid which will contain the densities
-	grid = np.zeros((Ngrid, Ngrid, Ngrid), dtype=np.float64)
+	grid = np.zeros((N_CELLS, N_CELLS, N_CELLS), dtype=np.float64)
 	x_dir = 0
 	y_dir = 1
 	z_dir = 2
@@ -28,9 +30,9 @@ def density(Ngrid, positions, mass):
 		t_z = 1 - d_z
 				
 		#Enforce periodicity for cell center coordinates + 1                
-		X = (x_c+1)%Ngrid
-		Y = (y_c+1)%Ngrid
-		Z = (z_c+1)%Ngrid
+		X = (x_c+1)%N_CELLS
+		Y = (y_c+1)%N_CELLS
+		Z = (z_c+1)%N_CELLS
 
 		grid[z_c,y_c,x_c] += mass*t_x*t_y*t_z
 					
