@@ -4,8 +4,8 @@
 # General simulation settings
 ###################################################
 
-N_PARTS          = 64 # Number of particles in one dimension
-N_CELLS          = 128 # Number of cells in one dimension
+N_PARTS          = 256 # Number of particles in one dimension
+N_CELLS          = 512 # Number of cells in one dimension
 BOX_SIZE         = 100 # Box size in Mpc/h in one dimension
 
 N_CPU            = 16 # Number of cpu's used
