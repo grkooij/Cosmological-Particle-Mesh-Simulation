@@ -3,44 +3,44 @@ import matplotlib.colors as colors
 from matplotlib.colors import LogNorm
 from numba import njit
 import matplotlib.pyplot as plt
-import h5py
+
+from configure_me import BOX_SIZE, N_CELLS, N_PARTS
 
 
-def plot_step(rho, box, savestep):
-	length_x = box.Lx
+def plot_step(rho, savestep):
 
+	mass = (N_CELLS/N_PARTS)**3
 	fig, ax = plt.subplots()
-	ax.imshow(rho[0,:,:], extent = (0,length_x,0,length_x), vmin=0., vmax=box.mass*3, cmap='viridis')
+	ax.imshow(rho[0,:,:], extent = (0,BOX_SIZE,0,BOX_SIZE), vmin=0., vmax=mass*3, cmap='viridis')
 	ax.set_xlabel("Mpc/h")
 	ax.set_ylabel("Mpc/h")
-	plt.savefig('Data/snapshots_density{}.png'.format(savestep), dpi=600, bbox_inches='tight')
+	plt.savefig('Data/snapshots_density{}.png'.format(savestep), dpi=1200, bbox_inches='tight')
 	plt.close()
 
-def plot_grf(rho, box):
+def plot_grf(rho):
 
-	length_x = box.Lx
 	rho = rho[0,:,:]
 
 	fig, ax = plt.subplots()
-	ax.imshow(rho, extent = (0,length_x,0,length_x), vmin=-1., vmax=np.max(rho), cmap='viridis')
-	plt.savefig('Data/snapshot_grf.png', dpi=600, bbox_inches='tight')
+	ax.imshow(rho, extent = (0,BOX_SIZE,0,BOX_SIZE), vmin=-1., vmax=np.max(rho), cmap='viridis')
+	plt.savefig('Data/snapshot_grf.png', dpi=1200, bbox_inches='tight')
 	plt.close()
 
-def plot_projection(rho, boxsize, mass, savestep, depth):
+def plot_projection(rho, savestep, depth):
 	cmap = colors.LinearSegmentedColormap.from_list("", ["black", "steelblue", "white", "yellow", "orange", "darkred"])
 	cmap.set_bad((0,0,0))
 
-	n_slices = np.int32(boxsize/depth)
+	mass = (N_CELLS/N_PARTS)**3
 
-	length_x = boxsize
+	n_slices = np.int32(BOX_SIZE/depth)
 
 	projection = project(rho, n_slices)
 	fig, ax = plt.subplots()
-	ax.imshow(projection/n_slices, extent = (0,length_x,0,length_x), norm=LogNorm(vmin=0.2, vmax=mass*10), cmap=cmap)
+	ax.imshow(projection/n_slices, extent = (0,BOX_SIZE,0,BOX_SIZE), norm=LogNorm(vmin=0.2, vmax=mass*10), cmap=cmap)
 	ax.set_xlabel("Mpc/h")
 	ax.set_ylabel("Mpc/h")
 
-	plt.savefig('Data/projection_density{}.png'.format(savestep), dpi=600, bbox_inches='tight')
+	plt.savefig('Data/projection_density{}.png'.format(savestep), dpi=1200, bbox_inches='tight')
 	plt.close()
 
 @njit

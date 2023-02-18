@@ -1,17 +1,12 @@
 import numpy as np
 
+from configure_me import H0, OMEGA_K0, OMEGA_LAMBDA0, OMEGA_M0, A_INIT
+
 class cosmo:
-	def __init__(self, H0, omega_m0, omega_b, omega_lambda0, omega_k0, power, a_init):
-		self.H0 = H0
-		self.powspec = power
-		self.omega_m0 = omega_m0
-		self.omega_b = omega_b
-		self.omega_lambda0 = omega_lambda0
-		self.omega_k0 = omega_k0
-		self.a_init = a_init
-		self.Dt = Dt(a_init, [omega_m0, omega_lambda0, omega_k0])
-		self.H01 = H(a_init, H0, [omega_m0, omega_lambda0, omega_k0])
-		self.f0 = f(a_init, [omega_m0, omega_lambda0, omega_k0])
+	def __init__(self):
+		self.Dt = Dt(A_INIT, [OMEGA_M0, OMEGA_LAMBDA0, OMEGA_K0])
+		self.H01 = H(A_INIT, H0, [OMEGA_M0, OMEGA_LAMBDA0, OMEGA_K0])
+		self.f0 = f(A_INIT, [OMEGA_M0, OMEGA_LAMBDA0, OMEGA_K0])
 
 def H(a, H0, cosmology):
 	#This function calculates the Hubble constant
@@ -32,7 +27,7 @@ def f(a, cosmology):
 	return 1/np.sqrt((omegaM + omegaK*a + omegaL*a**3)/a)
 
 def Dt(a, cosmology):
-	#This function calculates the growing mode linear growth factor Dt
+	#This function calculates the growing mode linear growth factor Dt as an approximation
 
 	omegaM = cosmology[0]
 	omegaL = cosmology[1]

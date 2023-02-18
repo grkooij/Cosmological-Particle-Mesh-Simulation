@@ -1,12 +1,14 @@
 import numpy as np
 
-def fourier_grid(box):
-	Ngrid = box.Ngrid
-	#Creating a Fourier grid
+from configure_me import N_CELLS
+
+def fourier_grid():
+	print("Setting up Fourier grid...")
+
 	scale = 2*np.pi
-	k_x = np.array(scale*np.fft.fftfreq(Ngrid), dtype='float32')
-	k_y = np.array(scale*np.fft.fftfreq(Ngrid), dtype='float32')
-	k_z = np.array(scale*np.fft.fftfreq(Ngrid), dtype='float32')
+	k_x = np.array(scale*np.fft.fftfreq(N_CELLS), dtype='float32')
+	k_y = np.array(scale*np.fft.fftfreq(N_CELLS), dtype='float32')
+	k_z = np.array(scale*np.fft.fftfreq(N_CELLS), dtype='float32')
 
 	#Transforming the axes to 3D grids
 	ky, kz, kx = np.meshgrid(k_z, k_y, k_x)
