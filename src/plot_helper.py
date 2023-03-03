@@ -3,6 +3,7 @@ import matplotlib.colors as colors
 from matplotlib.colors import LogNorm
 from numba import njit
 import matplotlib.pyplot as plt
+import mpl_scatter_density
 
 from configure_me import BOX_SIZE, N_CELLS, N_PARTS
 
@@ -27,6 +28,7 @@ def plot_grf(rho):
 	plt.close()
 
 def plot_projection(rho, savestep, depth):
+	print("Plotting projection projection_density{}.png".format(np.int32(savestep)))
 	cmap = colors.LinearSegmentedColormap.from_list("", ["black", "steelblue", "white", "yellow", "orange", "darkred"])
 	cmap.set_bad((0,0,0))
 
@@ -36,11 +38,28 @@ def plot_projection(rho, savestep, depth):
 
 	projection = project(rho, n_slices)
 	fig, ax = plt.subplots()
-	ax.imshow(projection/n_slices, extent = (0,BOX_SIZE,0,BOX_SIZE), norm=LogNorm(vmin=0.2, vmax=mass*10), cmap=cmap)
+	density = ax.imshow(projection/n_slices, extent = (0,BOX_SIZE,0,BOX_SIZE), norm=LogNorm(vmin=0.2, vmax=mass*25), cmap=cmap)
+	cb = fig.colorbar(density, label='Density')
+	cb.outline.set_edgecolor('white')
+	cb.set_label('Density', color="white")
+	cb.ax.yaxis.set_tick_params(color="white", which="both")
+
+	cb.outline.set_edgecolor("white")
+	cb.ax.minorticks_on()
+	plt.setp(plt.getp(cb.ax.axes, 'yticklabels'), color="white")
+
 	ax.set_xlabel("Mpc/h")
 	ax.set_ylabel("Mpc/h")
+	ax.xaxis.label.set_color("white")
+	ax.yaxis.label.set_color("white")
+	ax.tick_params(axis='x', colors='white', which='both')
+	ax.tick_params(axis='y', colors='white', which='both')
+	plt.setp(ax.spines.values(), color="white")
+	plt.setp([ax.get_xticklines(), ax.get_yticklines()], color="white")
 
-	plt.savefig('Data/projection_density{}.png'.format(savestep), dpi=1200, bbox_inches='tight')
+	fig.patch.set_facecolor('xkcd:black')
+	plt.style.context('dark_background')
+	plt.savefig('Data/projection_density{}.png'.format(np.int32(savestep)), dpi=1200, bbox_inches='tight')
 	plt.close()
 
 @njit

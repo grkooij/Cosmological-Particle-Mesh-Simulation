@@ -17,7 +17,7 @@ def integrate(positions, velocities, a_val, f_a1, da, potentials):
 
 	directions = [0,1,2]
 
-	cell_centers = np.floor(positions).astype(np.int64)	
+	cell_centers = np.floor(positions).astype(np.int64)%N_CELLS	
 	t = weights(cell_centers, positions)
 
 	for direction in directions:
@@ -30,7 +30,7 @@ def weights(cell_centers, positions):
 	x_dir = 0
 	y_dir = 1
 	z_dir = 2
-	t = np.zeros((8, len(positions[x_dir])), dtype=np.float64)
+	t = np.zeros((8, len(positions[x_dir])), dtype=np.float32)
 
 	for i in nb.prange(len(positions[x_dir])):
 		d_x = positions[x_dir, i] - cell_centers[x_dir, i]
@@ -57,7 +57,9 @@ def sweep_one_direction(cell_centers, positions, velocities, t, potentials, da, 
 	dir_x = 0
 	dir_y = 1
 	dir_z = 2
-	g_p = np.zeros(len(positions), dtype=np.float64)
+
+	#probeer aanpak van zondag 26/02 nogmaals maar dan de cell_centers.copy() buiten de loop.
+	#mogelijk is dat kopieren van mem intensief
 	cc_n = cell_centers[:].copy()
 	cc_p = cell_centers[:].copy()
 
@@ -89,9 +91,9 @@ def sweep_one_direction(cell_centers, positions, velocities, t, potentials, da, 
 		g_xz = (-potentials[Z,y,X] + potentials[Z2,y2,X2])
 		g_yz = (-potentials[Z,Y,x] + potentials[Z2,Y2,x2])
 		g_xyz = (-potentials[Z,Y,X] + potentials[Z2,Y2,X2])
-		g_p[i] = (g*t[0,i] + g_x*t[1,i] + g_y*t[2,i] + g_z*t[3,i] + g_xy*t[4,i] + g_xz*t[5,i] + g_yz*t[6,i] + g_xyz*t[7,i])/2.
+		g_p = (g*t[0,i] + g_x*t[1,i] + g_y*t[2,i] + g_z*t[3,i] + g_xy*t[4,i] + g_xz*t[5,i] + g_yz*t[6,i] + g_xyz*t[7,i])/2.
 
-	velocities += da*f_a1*g_p
-	positions = (positions + da*velocities/(a_val+da)**2*f_a1)%N_CELLS 
+		velocities[i] += da*f_a1*g_p
+		positions[i] = (positions[i] + da*velocities[i]/(a_val+da)**2*f_a1)%N_CELLS 
 
 	return positions, velocities

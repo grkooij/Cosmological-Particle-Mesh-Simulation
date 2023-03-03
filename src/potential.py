@@ -16,14 +16,14 @@ def potential_k(density_k, fgrid, a):
 
 def density_k(density):
 	
-	fft_grid = np.zeros([N_CELLS, N_CELLS, N_CELLS], dtype='cfloat')
-	fft_object = pyfftw.FFTW(density.astype('cfloat'), fft_grid, direction = 'FFTW_FORWARD', axes=(0,1,2), threads = N_CPU) 
+	fft_grid = np.zeros([N_CELLS, N_CELLS, N_CELLS], dtype=np.cdouble)
+	fft_object = pyfftw.FFTW(density.astype(np.cdouble), fft_grid, direction = 'FFTW_FORWARD', axes=(0,1,2), threads = N_CPU) 
 	return fft_object()
 
 def potential_real(potential_k):
 
 	#Performing the inverse Fourier transform to obtain potential in real space
-	fft_grid = np.zeros([N_CELLS, N_CELLS, N_CELLS], dtype='cfloat')
+	fft_grid = np.zeros([N_CELLS, N_CELLS, N_CELLS], dtype=np.cdouble)
 	ifft_object = pyfftw.FFTW(potential_k, fft_grid, direction = 'FFTW_BACKWARD',axes=(0,1,2), threads = N_CPU)
 	
 	return (ifft_object().real).astype('float32')

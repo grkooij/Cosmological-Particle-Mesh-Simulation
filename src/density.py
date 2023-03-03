@@ -8,7 +8,7 @@ from configure_me import N_CELLS
 def density(positions, mass):
 
 	#Create a new grid which will contain the densities
-	grid = np.zeros((N_CELLS, N_CELLS, N_CELLS), dtype=np.float64)
+	grid = np.zeros((N_CELLS, N_CELLS, N_CELLS), dtype=np.float32)
 	x_dir = 0
 	y_dir = 1
 	z_dir = 2
@@ -16,9 +16,9 @@ def density(positions, mass):
 	#Populate the density grid according to the CIC scheme
 	for i in nb.prange(len(positions[x_dir])):
 
-		x_c = np.int64(np.floor(positions[x_dir, i]))
-		y_c = np.int64(np.floor(positions[y_dir, i]))
-		z_c = np.int64(np.floor(positions[z_dir, i]))
+		x_c = np.int32(np.floor(positions[x_dir, i]))%N_CELLS
+		y_c = np.int32(np.floor(positions[y_dir, i]))%N_CELLS
+		z_c = np.int32(np.floor(positions[z_dir, i]))%N_CELLS
 
 		#Calculating contributions for the CIC interpolation
 		d_x = positions[x_dir, i] - x_c
