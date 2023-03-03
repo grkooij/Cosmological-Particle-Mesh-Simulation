@@ -12,7 +12,7 @@ N_CPU            = 16 # Number of cpu's used
 RANDOM_SEED      = 38 # random seed to use for the Gaussian Random Field.
 
 STEPS            = 1000 # Number of timesteps 
-N_SAVE_FILES     = 100 # Number of save files/plotsteps/projections
+N_SAVE_FILES     = 100  # Number of save files/plotsteps/projections
 
 PLOT_STEPS       = False
 PLOT_PROJECTIONS = False
@@ -20,6 +20,9 @@ PLOT_GRF         = False
 SAVE_DATA        = True
 SAVE_DENSITY     = False
 PRINT_STATUS     = True
+
+RESTART          = True
+RESTART_FROM_N   = 19
 
 ###################################################
 # Cosmology settings
@@ -33,3 +36,4 @@ OMEGA_K0               = 0.00 # Curvature density
 OMEGA_LAMBDA0          = 0.69 # Dark energy density
 H0                     = 0.68 # Hubble
 A_INIT                 = 0.01 # Initial scale factor
+A_END                  = 1.00 # Final scale factor

@@ -9,8 +9,8 @@ from configure_me import OMEGA_M0, OMEGA_LAMBDA0, OMEGA_K0, H0
 
 def zeldovich(density):
 	print('Calculating Zeldovich displacements...')
-	positions = np.zeros((3, N_PARTS**3), dtype=np.float64)
-	velocities = np.zeros((3, N_PARTS**3), dtype=np.float64)
+	positions = np.zeros((3, N_PARTS**3), dtype=np.float32)
+	velocities = np.zeros((3, N_PARTS**3), dtype=np.float32)
 
 	directions = [0, 1, 2]
 

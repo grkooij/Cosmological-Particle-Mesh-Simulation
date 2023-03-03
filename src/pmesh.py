@@ -1,4 +1,3 @@
-import numpy as np
 import numba as nb
 
 from time import time  
@@ -9,24 +8,12 @@ from zeldovich import zeldovich
 from fourier_utils import fourier_grid
 from gaussian_random_field import gaussian_random_field
 from cosmology import *
-from save_data import save_file
+from save_data import save_file, from_file
 from plot_helper import plot_step, plot_grf, plot_projection
 
-from configure_me import N_CELLS, N_PARTS, BOX_SIZE, N_CPU, STEPS, N_SAVE_FILES, RANDOM_SEED
-from configure_me import POWER, OMEGA_M0, OMEGA_B0, OMEGA_K0, OMEGA_LAMBDA0, H0, A_INIT
+from configure_me import N_CELLS, N_PARTS, BOX_SIZE, N_CPU, STEPS, N_SAVE_FILES, N_PLOTS, RESTART
+from configure_me import OMEGA_M0, H0, A_INIT, A_END, RESTART_FROM_N
 from configure_me import SAVE_DATA, PLOT_STEPS, PLOT_PROJECTIONS, PLOT_GRF, PRINT_STATUS
-
-class simbox:
-	def __init__(self, Npart, Ngrid, Lx, n_cpu, seed, n_save_files, steps):
-		self.Npart = Npart
-		self.Ngrid = Ngrid
-		self.Lx = Lx
-		self.force_resolution = Lx/Ngrid
-		self.seed = seed
-		self.n_cpu = n_cpu
-		self.steps = steps
-		self.savesteps = n_save_files
-		self.mass = (Ngrid/Npart)**3
 
 def simulator():
 
@@ -40,26 +27,34 @@ def simulator():
 	#in code units depends on the number of grid cells to particles cubed.
 	dens_contrast = (N_CELLS/N_PARTS)**3
 	print('Particle mass in code units: {:.3e}'.format(dens_contrast))
-	
-	da = (1.0 - A_INIT)/STEPS
-	da_save = (1.0 - A_INIT)/N_SAVE_FILES
+	da = (A_END - A_INIT)/STEPS
+	da_save = (A_END - A_INIT)/N_SAVE_FILES
+	da_plot = (A_END - A_INIT)/N_PLOTS
 	a_current = A_INIT
 	n_file = 0
+	n_plot = 0
 	
-	#Creating initial conditions with GRF and Zeldovich displacement
-	rho = gaussian_random_field()
-	positions, velocities = zeldovich(rho)
-	ksq_inverse = fourier_grid()
-	
-	if SAVE_DATA:
-		save_file(rho, positions, velocities, 0, a_current)
-		n_file += 1
-	if PLOT_GRF:
-		plot_grf(rho)  
- 
-	print('Starting the integrations...')
-	for s in range(STEPS):   
+	#Restarting from file
+	if RESTART:
+		print("Restarting from file data.{}.hdf5".format(RESTART_FROM_N))
+		n_file = RESTART_FROM_N
+		n_plot = (RESTART_FROM_N)/N_SAVE_FILES*N_PLOTS
+		positions, velocities, a_current = from_file(n_file)
 
+	#Creating initial conditions with GRF and Zeldovich displacement
+	else:
+		rho = gaussian_random_field()
+		positions, velocities = zeldovich(rho)
+		if SAVE_DATA:
+			save_file(rho, positions, velocities, 0, a_current)
+			n_file += 1
+		if PLOT_GRF:
+			plot_grf(rho) 
+
+	ksq_inverse = fourier_grid()  
+	print('Starting the integrations...')
+	while a_current<A_END-da:
+		
 		start_time = time()
 
 		rho = density(positions, dens_contrast)
@@ -67,30 +62,32 @@ def simulator():
 
 		a_current += da
 		
-		if a_current >= n_file*da_save:
+		if a_current >= A_INIT + n_file*da_save:
 			if SAVE_DATA:
 				save_file(rho, positions, velocities, n_file, a_current)
-			if PLOT_STEPS:
-				plot_step(rho, n_file)
-			if PLOT_PROJECTIONS:
-				plot_projection(rho, n_file, 15)
-
 			n_file += 1
+		if a_current >= A_INIT + n_plot*da_plot:	
+			if PLOT_STEPS:
+				plot_step(rho, n_plot)
+			if PLOT_PROJECTIONS:
+				plot_projection(rho, n_plot, 15)
+			n_plot += 1
 
 		if PRINT_STATUS:
-			print_status(s, start_time)
+			print_status(a_current, start_time)
 						
 	return
 
-def print_status(s, start_time):
+def print_status(a_current, start_time):
 
-	percentile = 100*s/STEPS
-	print('{}%'.format(percentile), "Save step time: --- %.5f seconds ---" % (time() - start_time))
+	percentile = 100*(a_current-A_INIT)/(A_END-A_INIT)
+	print("%.5f" % percentile,"%", " Save step time: --- %.5f seconds ---" % (time() - start_time))
 
 if __name__ == "__main__":
 
 	nb.set_num_threads(N_CPU)
 	start_time = time()
+
 	simulator()
 	print("Finished in")
 	print("--- %.2f seconds ---" % (time() - start_time))
