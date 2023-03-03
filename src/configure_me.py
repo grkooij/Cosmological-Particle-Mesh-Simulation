@@ -21,8 +21,8 @@ SAVE_DATA        = True
 SAVE_DENSITY     = False
 PRINT_STATUS     = True
 
-RESTART          = True
-RESTART_FROM_N   = 19
+RESTART          = False #If True, restart from savefile number RESTART_FROM_N
+RESTART_FROM_N   = 0
 
 ###################################################
 # Cosmology settings
