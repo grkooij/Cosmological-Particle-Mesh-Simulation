@@ -13,6 +13,7 @@ RANDOM_SEED      = 38 # random seed to use for the Gaussian Random Field.
 
 STEPS            = 1000 # Number of timesteps 
 N_SAVE_FILES     = 100  # Number of save files/plotsteps/projections
+N_PLOTS          = 100  # Number of plots saved to disk
 
 PLOT_STEPS       = False
 PLOT_PROJECTIONS = False
