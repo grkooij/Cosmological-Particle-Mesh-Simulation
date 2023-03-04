@@ -58,10 +58,8 @@ def sweep_one_direction(cell_centers, positions, velocities, t, potentials, da, 
 	dir_y = 1
 	dir_z = 2
 
-	#probeer aanpak van zondag 26/02 nogmaals maar dan de cell_centers.copy() buiten de loop.
-	#mogelijk is dat kopieren van mem intensief
-	cc_n = cell_centers[:].copy()
-	cc_p = cell_centers[:].copy()
+	cc_n = np.copy(cell_centers[:])
+	cc_p = np.copy(cell_centers[:])
 
 	cc_n[direction] = cell_centers[direction]-1
 	cc_p[direction] = (cell_centers[direction]+1)%N_CELLS
